@@ -30,11 +30,11 @@
   "author": "CaseBoard contributors",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/<your-github-name>/caseboard-dev.git"
+    "url": "git+https://github.com/SIGHSHIGH/dsh-Caseboard-skill.git"
   },
-  "homepage": "https://github.com/<your-github-name>/caseboard-dev#readme",
+  "homepage": "https://github.com/SIGHSHIGH/dsh-Caseboard-skill#readme",
   "bugs": {
-    "url": "https://github.com/<your-github-name>/caseboard-dev/issues"
+    "url": "https://github.com/SIGHSHIGH/dsh-Caseboard-skill/issues"
   },
   "engines": {
     "node": ">=20"

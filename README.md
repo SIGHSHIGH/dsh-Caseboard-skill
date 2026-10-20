@@ -37,7 +37,7 @@ dsh plugin add caseboard-dev
 dsh plugin add F:\path\to\caseboard-dev
 
 # 从 git
-dsh plugin add github:<your-github-name>/caseboard-dev
+dsh plugin add github:SIGHSHIGH/dsh-Caseboard-skill
 ```
 
 装完重启 dsh（或重新挂载该 profile）。技能会出现在技能目录里，名字是 `caseboard-dev`。
@@ -100,13 +100,28 @@ powershell -ExecutionPolicy Bypass -File <技能目录>\scripts\check.ps1
 - **不起进程**：插件本身不 spawn 子进程；`check.ps1` 只有在你或 agent 显式执行时才运行仓库里的命令。
 - **数据留在本机**：技能描述的应用本身是本地优先设计（SQLite + 本地素材），技能不改变这一点。
 
-## 发布前需要替换
+## 仓库与发版
 
-`package.json` 里的 `<your-github-name>` 三处（`repository` / `homepage` / `bugs`）与 README 里的安装示例换成你自己的仓库地址，然后：
+源代码在 <https://github.com/SIGHSHIGH/dsh-Caseboard-skill>。
 
 ```bash
+git clone https://github.com/SIGHSHIGH/dsh-Caseboard-skill.git
+```
+
+改完技能内容后按语义化版本发版：
+
+```bash
+# 1) 改 package.json 的 version，并同步 CHANGELOG（或在提交信息里写清楚）
+# 2) 提交并打 tag
+git commit -am "chore: bump x.y.z"
+git tag -a vx.y.z -m "caseboard-dev x.y.z"
+git push origin main --tags
+
+# 3) 发布到 npm（可选：不发布也能用 dsh plugin add github:... 安装）
 npm publish --access public
 ```
+
+版本对应关系：`v0.1.0` = 首个开源版本，技能内容与案情板 CaseBoard Beta 1.0（M1–M18 全部验收通过）对齐。
 
 ## 许可
 

@@ -8,8 +8,11 @@ caseboard-dev
 非商业使用，不得用于商业目的。本仓库不包含该应用的源代码、安装包、
 图标或任何素材，只包含对其架构与工程约定的描述性文字。
 
-CaseBoard 项目地址（由使用者自行配置）：
-  <your-github-name>/caseboard
+案情板 CaseBoard 应用本体：
+  https://github.com/SIGHSHIGH/Caseboard
+
+本技能包：
+  https://github.com/SIGHSHIGH/dsh-Caseboard-skill
 
 引用到的第三方名称（Tauri、React、React Flow、CodeMirror、Lezer、
 Zustand、Immer、SQLite、Zod 等）归各自所有者，仅作技术描述之用。

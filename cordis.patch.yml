@@ -1,0 +1,6 @@
+# 本插件要在 profile 里插入的 Cordis 行。
+# 只挂一行：caseboard-dev/skills，它注册一个 skill provider，
+# 模型通过 skill 工具按需加载 assets/skills/caseboard-dev/SKILL.md。
+- insert:
+    - id: caseboard-skills
+      name: caseboard-dev/skills

@@ -1,0 +1,15 @@
+caseboard-dev
+
+本仓库只包含「案情板 CaseBoard 的编辑技能」这一份文档与薄插件代码，
+以 MIT 许可发布（见 LICENSE）。
+
+它描述的 **案情板 CaseBoard 应用本体** 是另一个独立项目，采用
+**PolyForm Noncommercial License 1.0.0**：可以自由查看、修改、分发与
+非商业使用，不得用于商业目的。本仓库不包含该应用的源代码、安装包、
+图标或任何素材，只包含对其架构与工程约定的描述性文字。
+
+CaseBoard 项目地址（由使用者自行配置）：
+  <your-github-name>/caseboard
+
+引用到的第三方名称（Tauri、React、React Flow、CodeMirror、Lezer、
+Zustand、Immer、SQLite、Zod 等）归各自所有者，仅作技术描述之用。

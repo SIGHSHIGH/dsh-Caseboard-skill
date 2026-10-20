@@ -1,0 +1,18 @@
+# 依赖（本包零运行时依赖，永远不该出现）
+node_modules/
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+
+# 打包/临时产物
+*.tgz
+dist/
+.tmp*/
+npm-debug.log*
+
+# 编辑器与系统
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini

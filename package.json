@@ -1,0 +1,73 @@
+{
+  "name": "caseboard-dev",
+  "version": "0.1.0",
+  "description": "案情板 CaseBoard 的编辑技能（DSH 插件）：把一个已验收的 Tauri 桌面办案应用变成「AI 能安全改」的代码库 —— Gate 0 八条硬约束、六层架构地图、四件套验收尺子、22 条可直接套用的作业提示词，外加一条一键自检脚本。",
+  "type": "module",
+  "main": "skills.js",
+  "exports": {
+    "./skills": "./skills.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "skills.js",
+    "cordis.patch.yml",
+    "assets",
+    "README.md",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "skill",
+    "caseboard",
+    "案情板",
+    "tauri",
+    "react-flow"
+  ],
+  "license": "MIT",
+  "author": "CaseBoard contributors",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/<your-github-name>/caseboard-dev.git"
+  },
+  "homepage": "https://github.com/<your-github-name>/caseboard-dev#readme",
+  "bugs": {
+    "url": "https://github.com/<your-github-name>/caseboard-dev/issues"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dsh": {
+    "plugin": true,
+    "kind": "server",
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "disclosure": {
+    "cloud": false,
+    "network": [],
+    "offlineMode": true,
+    "apiKeys": [],
+    "permissions": {
+      "filesystem": "插件自身只读取本包内的 assets/skills 文本。技能正文要求 agent 读写用户自己的 CaseBoard 仓库，那些操作由 agent 的文件工具执行、由用户的工作区权限约束。",
+      "subprocess": "插件本身不启动任何子进程。技能附带的 scripts/check.ps1 只在用户或 agent 显式执行时才运行仓库里的 pnpm / tauri 命令。"
+    },
+    "jurisdiction": [],
+    "retention": "none"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.4",
+    "@deepseek-ai/dsh": ">=0.2.0-rc.2"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/cordis": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh": {
+      "optional": true
+    }
+  }
+}

@@ -1,7 +1,7 @@
 {
   "name": "caseboard-dev",
-  "version": "0.1.0",
-  "description": "案情板 CaseBoard 的编辑技能（DSH 插件）：把一个已验收的 Tauri 桌面办案应用变成「AI 能安全改」的代码库 —— Gate 0 八条硬约束、六层架构地图、四件套验收尺子、22 条可直接套用的作业提示词，外加一条一键自检脚本。",
+  "version": "0.2.0",
+  "description": "案情板 CaseBoard 的编辑技能（DSH 插件）：把一个已验收的双平台办案应用（Tauri 2 桌面 + 鸿蒙 ArkTS/ArkWeb）变成「AI 能安全改」的代码库 —— Gate 0 八条硬约束与双平台镜像纪律、六层架构地图、钉子/红线/触控手势等新增能力、四件套与鸿蒙 accept 链两套验收尺子、28 条可直接套用的作业提示词，外加一条一键自检脚本。",
   "type": "module",
   "main": "skills.js",
   "exports": {
@@ -24,7 +24,10 @@
     "caseboard",
     "案情板",
     "tauri",
-    "react-flow"
+    "react-flow",
+    "harmonyos",
+    "arkts",
+    "arkweb"
   ],
   "license": "MIT",
   "author": "CaseBoard contributors",

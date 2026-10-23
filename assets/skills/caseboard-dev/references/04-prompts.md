@@ -214,6 +214,76 @@
 - 手感类改动必须给"改前/改后"的量化对比（例如压卡数、交叉数、吸附触发距离），并补 smoke 断言。
 ```
 
+## P13 · 触屏 / 平板交互（长按、命中带、抽屉、触控尺寸）
+
+```
+要改的触控行为：<例如"长按卡片 100ms 进多选"、"连线命中带加宽到 34px"、"窄档右栏改浮层抽屉">
+设备：<平板模拟器 MatePad Pro 13（1440×893 CSS px @ dpr 2）/ 真机 / 桌面触屏>
+
+要求：
+1. 先判断落点：这套改造是「鸿蒙独有」还是「两边都该有」——前者改 platforms/harmony/web/src（及 styles/responsive.css），
+   后者先落 main 的 src/ 再同步（见 references/06-harmony.md 第 2 节）。改错分支 = 白干。
+2. 触控尺寸走 lib/viewport.ts 的分档（1180 / 900）与 pointer: coarse 变量，不要另起一套断点。
+3. 长按/拖拽阈值一律提常量（现有：长按 100ms、拖动跟手 480ms 档已废弃）并写进 lib/，禁止裸数字。
+4. ArkWeb 会把真机长按抢成 contextmenu：必须同时给一条右键菜单通道，别只押长按。
+5. 验收：platforms/harmony/scripts/accept-h5.ps1 加一条 Assertion（照 Add-Result 的写法，抓 hilog 探针）；
+   桌面侧若同步了，main 工作树跑 typecheck + build + ui-smoke。
+6. 手感必须给量化对比（帧间隔 p50/p95、drop 帧数、命中带宽度），照 H5-2 / H5-19 / H5-21 的格式。
+```
+
+## P14 · 集中钉子 / 钉集 / 红线（模型 + 命令 + 渲染 + DSL）
+
+```
+要加/改的钉子行为：<例如"钉集成员可绕钉旋转 15° 步进"、"红线支持箭头"、"钉集内层级可调">
+
+按这个顺序改，一处都不能漏：
+1. src/types/index.ts        —— CaseNode.type 加 'clusterPin' 相关字段 / ImageNode 加 pinPos·pinColor·clusterId·clusterOffset / PinLink 加属性
+2. src/serializers/migrate.ts —— normalizeDoc 里补缺省与夹取（clusterOffset 一律走 clamp；pinLinkWidth 夹 1–12）
+3. src/commands/             —— pinLinkCommands（红线）或 imageNodeCommands 的集内命令；一次操作 = 一条 Command = 一次撤销
+4. src/lib/clusterPin.ts     —— 几何与常量（CLUSTER_Z_BASE 1000 / CLUSTER_PIN_Z 1600 / 钉子 30×30 / PIN_LINK_WIDTH 1–12 缺省 4）
+5. 渲染                      —— Board.tsx 的拖拽分支（渲染优先级 dockPreview ?? dragPos ?? 派生坐标，松手清预览）
+                               + PinLinkLayer.tsx（红线，ViewportPortal 内直线层）
+6. 右栏                      —— RightPanel.tsx 对应分组；集中钉右栏不出现别名/地图坐标/评论
+7. DSL                      —— 要进代码视图就同步 dsl/{serialize,parse,diff}.ts（白名单见 dsl/diff.ts）
+8. 断言                      —— 桌面 scripts/smoke.cjs 新段（从 [80] 起）；鸿蒙 accept-h5.ps1 加 Assertion
+9. 红线纪律                  —— 永不写进 CaseDoc.edges（G0-3 补注）
+
+验收：typecheck → smoke → build → ui-smoke →（碰鸿蒙）build-web.ps1 + accept-h5.ps1
+```
+
+## P15 · 桌面 ↔ 鸿蒙回填（先判方向，再记账）
+
+```
+要回填的功能：<例如"鸿蒙的应用内确认框（A5）"、"钉集相对位置控件"、"触屏命中带">
+来源：<harmony 分支的哪个文件/提交；还是主线 src/ 的哪次改动>
+
+规则：
+1. 先读 platforms/harmony/docs/FEATURE-DIFF-WIN-VS-HARMONY.md，确认这条在 A1–A10 / B1–B4 里的编号与"桌面现状"。
+2. 方向只能是 harmony → main；落点在 main 工作树 F:\DSH PROJECT\.cb-main 的 src/。
+3. 逐文件 port，不要整目录覆盖（镜像里有 12 个鸿蒙独有文件，桌面不该有）。
+4. 桌面侧要补断言：scripts/smoke.cjs 新段 + scripts/ui-smoke.cjs（若动 UI）；平台特有代码不许进 smoke 编译集。
+5. 记账三处：main 的 CHANGELOG.md（四段式：症状/根因/改了什么/验收）、
+   platforms/harmony/docs/HARMONY-MILESTONES.md:23 的「桌面回填（main）」行、platforms/harmony/CHANGELOG.md 反向一条。
+6. 若需要鸿蒙侧也同步，cherry-pick 回 harmony 并在台账写提交号（对照 774fa62 → 4a6315c 的做法）。
+7. 验收：main 工作树四件套 + （碰 .tsx 时）build + ui-smoke；鸿蒙侧无改动就不必跑 accept 链。
+```
+
+## P16 · 鸿蒙侧构建 / 验收排障
+
+```
+症状：<例如"accept-h5 报 H5-35 red=0"、"模拟器装不上包"、"页面白屏"、"改了 web/src 没变化">
+
+先按这个顺序排查（每步只改一件事并记录结果）：
+1. 产物真的更新了吗：build-web.ps1 跑过没？entry/src/main/resources/rawfile/{index.html,assets} 的时间戳。
+2. 装进去的是新包吗：accept-h5 的 -Hap 指向哪个 HAP；模拟器只认 DevEco 签名包（否则 code:9568332）。
+3. 白屏 → 看是否 resource:// 与 ESM 的 CORS 问题（必须走 caseboard://rawfile/）。
+4. 桥调用拿不到值 → 是不是没在参数表末尾传回调（asyncMethodList 不回传返回值）。
+5. 页面源码显示成文本 → setMimeType 是否混进了 charset（只吃裸 MIME）。
+6. 断言失败 → 报告 platforms/harmony/.tmp-esbuild/accept-h5.json 里那条的 detail；探针 phase 用
+   node scripts/check-probe.mjs <Index.ets> <phase> 先校验源码能编译。
+输出：根因（file:line）+ 修复 + 重跑的命令 + 前后对比数字。
+```
+
 ---
 
 ## 组合用法

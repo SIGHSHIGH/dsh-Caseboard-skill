@@ -265,6 +265,29 @@ pnpm typecheck → pnpm smoke → pnpm ui-smoke → pnpm bench →（涉及构�
 
 ---
 
+## P11 · 双平台定位（任何跨端需求的第一条）
+
+**何时用**：需求可能同时涉及桌面与鸿蒙，或用户只说「改一下手感 / 加个功能」而没说哪端。
+
+```
+需求原文：{用户的话}
+
+先别写代码，回答这四件事：
+1. 这个能力在两端现在是什么状态？（对照 platforms/harmony/docs/FEATURE-DIFF-WIN-VS-HARMONY.md
+   的 A1–A10 / B1–B4，尤其 A 表里"桌面现状"那一列——能不能用 ≥ H5.x 之后主线是否已回填，
+   去 main 工作树 grep 判定，例如 SystemDialogs.tsx / setNodeLayer / askConfirm 是否存在）
+2. 它该落哪一侧：平台缝（原生 API / 渲染容器 / 生命周期 / 导出后端 / 存储后端）→ 各端各写；
+   其余逻辑 → 先落 main 的 src/，再手工同步到 platforms/harmony/web/src。
+3. 需不需要回填：如果落点是鸿蒙独有（例如触控手势、抽屉布局、钉集相对位置控件），
+   按 04-prompts.md 的 P15 记账（CHANGELOG + HARMONY-MILESTONES:23 两列 + 差分文档）。
+4. 验收各跑什么：桌面四件套 / 鸿蒙 build-web + accept-h5（+ 碰桥时 accept-h0）。
+
+输出：一张三列表（能力 · 桌面现状 · 鸿蒙现状）+ 本次要改的文件白名单 + 验收命令。
+不确定产品要不要两端一致时，把选择摆给用户，不要自己对齐。
+```
+
+---
+
 ## 反模式清单（贴在哪都适用）
 
 | 别做 | 因为 |
@@ -279,3 +302,6 @@ pnpm typecheck → pnpm smoke → pnpm ui-smoke → pnpm bench →（涉及构�
 | 直接改 `weight` 表达视觉粗细 | `weight` 参与统计/筛选语义，视觉粗细用 `thickness`（D96） |
 | 改 DSL 相关逻辑不跑 bench | 1000 节点 <300ms 是硬门禁 |
 | 用 `pnpm tauri` | 本机 argv[0] 是 Electron，会报 unrecognized subcommand，必须 `node scripts/tauri-cli.cjs` |
+| 在 `harmony` 分支改根 `src/` | 那是落后主线 36 个文件的镜像，改动不会出现在任何产物里 |
+| 用 `write` 整份覆盖镜像目录做「同步」 | 镜像有 12 个鸿蒙独有文件；要逐文件 port |
+| 忘记 `build-web.ps1` 就直接装 HAP | rawfile 是产物，界面不会变 |

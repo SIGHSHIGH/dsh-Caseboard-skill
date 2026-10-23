@@ -1,7 +1,9 @@
-# 验收体系：四件套 + 桌面自检
+# 验收体系：四件套 + 桌面自检 + 鸿蒙上机
 
 > 基线（Beta 1.0 记录）：`typecheck` 0 error · `smoke` **871 PASS**（78 段 `[1]`–`[77]`，`[11]` 出现两次）· `ui-smoke` **430 PASS / 0 FAIL**（26 个 `[UI]` 分组）· `bench` 1000 节点解析链 **74.5 ms**（阈值 300）· `build` 成功 · 桌面自检两轮 PASS。
 > 耗时参考：typecheck 2–3 s、build 5–7 s、smoke ~1 s、ui-smoke ~35 s、bench <1 s、bench:board ~9 s、verify ~45 s。
+> ⚠️ 四件套**要在 `main` 工作树（`F:\DSH PROJECT\.cb-main`）里跑**：`harmony` 分支的根 `src/` 是落后镜像，在那里跑出来的数字不代表主干（`06-harmony.md` §0/§5.1）。
+> 鸿蒙侧基线：`accept-h5.ps1` 现存 **45** 条 Assertion 全 PASS（编号 H5-1…H5-41）；`accept-h1.ps1` 22 条、`accept-h4.ps1` 8 条；`accept-h0.ps1` 是 H0 的八项（见 `platforms/harmony/docs/H0-ACCEPTANCE.md`）。
 
 ## 1. 脚本矩阵
 
@@ -74,14 +76,34 @@ powershell -ExecutionPolicy Bypass -File scripts/sign-installer.ps1
 - 签名：证书要在 `Cert:\CurrentUser\My` 里（当前机器没有 → 会打印 "No code signing certificate…"，属预期）；`signtool` 只在 Windows Kits 目录下被找到。演练用 `-SelfSignedTest`。
 - 产物归档：把 `caseboard.exe` 与安装包拷进 `release\`（该目录**不在版本控制内**），字节数与 SHA-256 记到 `docs/RELEASES.md` / `CHANGELOG.md`。
 
+## 6.1 鸿蒙链路（ArkWeb + HAP，全部在 `platforms/harmony/` 下跑）
+
+```powershell
+cd platforms\harmony
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\build-web.ps1   # tsc → vite → postbuild-rawfile.mjs → entry/src/main/resources/rawfile
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\build-hap.ps1   # hvigorw assembleHap --mode module -p product=default -p buildMode=debug
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\accept-h5.ps1   # 前端产物 → HAP → 安装 → 上机断言（现 45 条）
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\accept-h0.ps1   # 桥 / SQLite / 文件通路（H0 八项）
+```
+
+- 设备：模拟器 `127.0.0.1:5555`（HarmonyOS 26.0.0 平板，MatePad Pro 13）；`-Target` 指真机，`-Hap` 指已签名包。
+- **签名**：模拟器只认 DevEco 签名站点出的包，未签名包报 `code:9568332 install sign info inconsistent`。
+- 报告落 `.tmp-esbuild/accept-h{0,1,4,5}.json`；`rawfile/` 是产物、不入库，改了 `web/src` 必须重跑 `build-web.ps1` 才看得到。
+- 工具链定位在 `scripts/_env.ps1`（`DEVECO_HOME` / `NODE_HOME` / `HDC` / `PNPM_CLI`，都没有就找 `D:\DevEco Studio` 等常见路径）。**不要用 `$home` 这类只读自动变量名**。
+- 探针：`--ps caseboardSelftest <phase>` → `pages/Index.ets` 的 `runBridgeProbe()` 打 hilog → 脚本抓日志断言；辅助脚本 `check-probe.mjs` / `extract-probe.mjs` / `splice-phase*.mjs` / `fix-bom.mjs`。
+- 没有真实单测（`entry/src/test/LocalUnit.test.ets` 只有一个模板用例），断言一律靠 accept 脚本。
+
 ## 7. 最快的验证台阶（照这个顺序，不要跳）
 
 - **(a) 只改 `lib/`**：`typecheck` → `smoke` →（动了导出就再 `verify`）
 - **(b) 改 `.tsx` / UI**：`typecheck` → `build` → `ui-smoke` → `verify`
 - **(c) 改 DSL / 语法**：`node scripts/build-grammar.mjs`（若 `.grammar` 变了）→ `typecheck` → `smoke`（`[20]`–`[24]` 会立刻暴露解析错误）→ `bench` → `build && ui-smoke`
 - **(d) 改 Rust / 打包**：`build` → `tauri-cli build --no-bundle` → `run-selftest` → `--bundles nsis` → 手工安装 C1–C5
+- **(e) 改鸿蒙侧（`platforms/harmony/`）**：`build-web.ps1` → 碰了桥/平台缝再 `accept-h0.ps1` → `accept-h5.ps1`（首次或大改再补 `accept-h1/h4`）；同时在 main 工作树跑 `typecheck`（逻辑层同构，别让镜像漂移）
 
 ## 8. 自动化覆盖不到的（只能人工）
 
 真实 WebView2 渲染与排版、拖拽/缩放/旋转手感、HMR 时延、原生保存对话框与外部查看器里的导出保真、系统级拖放与文件选择器、打包后 App 里的 OCR WASM、局域网/离线复验、NSIS 向导与卸载与 SmartScreen、签名链、多实例与 SQLite 文件锁。
 对应清单：`docs/MANUAL-ACCEPTANCE.md` 的 A1–A10、B1–B4、C1–C5、R1–R6。交付时**明确说出哪几项没被自动验证**。
+
+鸿蒙侧另外这几项也只能上机看：真手势（长按 480ms→100ms 的档位、双指缩放、惯性）、拖钉集时的手感与跟手影、`confirm/alert` 替换后的对话框观感、只横屏的闸门、系统 OCR / PDFKit 输出、HAP 签名与安装向导。

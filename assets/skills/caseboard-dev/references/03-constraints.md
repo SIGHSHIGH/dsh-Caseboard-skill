@@ -12,7 +12,7 @@
 
 ## G0-2 所有写操作走 Command
 
-- 落点：`src/commands/types.ts:1-12`（`interface Command { label; apply(draft: Draft<CaseDoc>): void }`）；`src/store/docStore.ts:29-48` 的 `DocStore` 接口**没有 setter**（只有 `dispatch/undo/redo/hydrate/flush/removeWithTrash`）；`:110-119` `dispatch` = `produceWithPatches` → `patches.length===0` 丢弃 → `past.slice(-200)`（`:16`）→ `scheduleSave`（400 ms `:18`，5 分钟快照 `:20`）；`:121-137` undo/redo 走 `applyPatches(inverse/forward)`；内部 `setState` 只碰 `lastSavedAt/ready`（`:77,:199`）。命令工厂共 43 个，全在 `src/commands/index.ts:1-74`。
+- 落点：`src/commands/types.ts:1-12`（`interface Command { label; apply(draft: Draft<CaseDoc>): void }`）；`src/store/docStore.ts:29-48` 的 `DocStore` 接口**没有 setter**（只有 `dispatch/undo/redo/hydrate/flush/removeWithTrash`）；`:110-119` `dispatch` = `produceWithPatches` → `patches.length===0` 丢弃 → `past.slice(-200)`（`:16`）→ `scheduleSave`（400 ms `:18`，5 分钟快照 `:20`）；`:121-137` undo/redo 走 `applyPatches(inverse/forward)`；内部 `setState` 只碰 `lastSavedAt/ready`（`:77,:199`）。命令工厂全在 `src/commands/index.ts` 汇总导出（0.1 版是 43 个；H5 回填后新增了 `pinLinkCommands` 一族与 `setNodeLayer` / `moveNodes` / `addNodesToGroup` / `setClusterOffset` 等，**确切清单以该文件为准**，模块职责见 `01-architecture.md` 第 4 节）。
 - 注意："广播"没有叫这个名字的标识符，它就是 Zustand 订阅（`useCodeSyncBridge.ts:12`、各处的 `useDoc()`）。
 - 守着它：smoke `[2]`（`:72-82` 加→撤→重做）、`[3]`（`:84` "撤销栈清空后不再生效"）、`:1018` "无改动时 changes 为空（不污染撤销栈）"、`:1178` "格式化不改模型、不占撤销栈"。
 - 破坏症状：没有任何机制拦 `useDocStore.setState({doc})`（grep 确认 docStore 之外无人调用）。绕过 dispatch 立刻失去 undo 与持久化；在 Command 外做 Immer mutation 会静默改动 store 副本，撤销栈对不上。
@@ -57,6 +57,22 @@
 - **已知例外（D 记录在案）**：`src/components/flow/GroupRectNode.tsx:59-60` 自己 `(event.clientX - start.x) / zoom`（`:40` 用 `useViewport()`），是历史遗留，改这块时顺手评估是否回收。
 - 守着它：没有自动断言（人工评审项）；smoke `[44]` `:2663` 与 `[51]` `:2855` 只覆盖 `lib/map.ts` 的纯投影。
 - 要做的事：新交互先在 `coords.ts` 加纯函数并写 smoke 断言，再让组件调用。
+
+**补注（H5.6.3 起，2026-10）——红线不是关系线**：集中钉子之间的「红线」存在 `CaseDoc.pinLinks`（`PinLink{id,source,target}`，写入口 `commands/pinLinkCommands.ts`），由 `components/flow/PinLinkLayer.tsx` 直接画直线（`settings.pinLinkWidth ?? 4`），**不进 `CaseDoc.edges`、没有 `LineStyle`、不参与关系梳理 / 证据链 / DSL 边白名单**。线型语义只管 `edges`。
+守着它：鸿蒙 `scripts/accept-h5.ps1` 的 H5-35（`red=1 redW=4`）、H5-36（`redLen=317`）、H5-39（`straight=1 edgesDelta=0`——红线没有多出一条边）；桌面 `scripts/smoke.cjs` 的「DSL 往返（H5.6.4：集中钉子与红线不再被代码视图丢掉）」段（`origin/main` 从 `:4252` 起，含「红线进入文本并解析回 `pinLinks`（id 稳定）」）。
+
+## G0-9 双平台同构（镜像白名单）
+
+- 落点：`platforms/harmony/web/src/` 是 `src/` 的**镜像副本**，白名单清单见 `06-harmony.md` 第 2 节（5 个平台缝同名不同实现 + 5 个鸿蒙新增 + 桌面独有的 `services/ocrBuiltin.ts`）。
+- 纪律：逻辑改动**先落 `main` 再同步**；合并方向只许 `harmony → main`（`platforms/harmony/docs/REPO-STRATEGY.md:44-56`）；计划中的 `scripts/sync-web.ps1` **未实现**，同步是手工的。
+- 守着它：没有自动断言（人工评审项）。能机械查的是 `diff -rq src platforms/harmony/web/src`——差异必须**只有白名单**那几项。
+- 破坏症状：在 `harmony` 分支直接改根 `src/`（改到落后主线的镜像，白干）；两侧同一逻辑各写一份、慢慢分叉。
+
+## 架构约束（不在 Gate 0 八条里，但一样会被打回）
+
+1. **不用 `window.confirm/alert`**：桌面 WebView2 与 ArkWeb 都会吞掉或行为不一致。鸿蒙已全替为 `uiStore.askConfirm` / `pushNotice` + `components/panels/SystemDialogs.tsx`（TopBar 4 / AiPanel 3 / AiImagePanel 1 / HistoryDialog 1，共 9 处；云端授权两处带 `danger`）。桌面 A5 尚未回填——**新代码别再引入原生弹窗**。
+2. **钉集坐标只认一条渲染链**：`dockPreview ?? dragPos ?? 派生坐标`（`lib/clusterPin.ts` 的 `memberPosition`），松手必须清预览、只 dispatch 一次；否则钉子与成员图片的相对位置会漂（H5.6）。
+3. **钉集强制置顶**：成员 `z ≥ CLUSTER_Z_BASE(1000)`、钉子 `CLUSTER_PIN_Z(1600)`、钉子 30×30（`lib/clusterPin.ts:17-23`）。层级控件（`setNodeLayer`）要在这套地板之上工作，别把钉子压到卡片下面。
 
 ## 设计令牌速查
 
